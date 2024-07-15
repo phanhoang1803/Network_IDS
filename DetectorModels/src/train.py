@@ -178,6 +178,7 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
     current_patience = 0
     
     print("[INFO] Training started...")
+    print("[INFO] Traning on {} device...".format(device))
     
     make_dir(CONFIG["save_dir"])
     
@@ -379,6 +380,7 @@ def main():
         shuffle=False
     )
     
+    print(f"[INFO] Training on {len(df_train)} samples and validating on {len(df_valid)} samples.")
     
     # Get dataloaders
     # train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
