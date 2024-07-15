@@ -17,7 +17,7 @@ import copy
 from data.data_loading import load_data
 from data.dataset import UNSW_NB15_Dataset
 from model.criterion import criterion
-from utils.utils import fetch_model, parse_args, set_seed
+from utils.utils import fetch_model, parse_args, set_seed, make_dir
 
 def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     """
@@ -179,6 +179,8 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
     current_patience = 0
     
     print("[INFO] Training started...")
+    
+    make_dir(CONFIG["save_dir"])
     
     for epoch in range(1, CONFIG["epochs"] + 1):
         gc.collect()

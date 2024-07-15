@@ -5,6 +5,10 @@ import numpy as np
 import torch
 from model.MLP import MLP
 
+def make_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 def set_seed(seed):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
