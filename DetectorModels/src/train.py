@@ -88,6 +88,9 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
         tuple: A tuple containing the epoch loss and epoch accuracy.
     """
     
+    if len(dataloader) == 0:
+        return np.inf, 0
+    
     # Set the model to evaluation mode
     model.eval()
     
@@ -334,13 +337,15 @@ def prepare_loaders(df, fold, CONFIG):
         batch_size=CONFIG["train_batch_size"],
         num_workers=CONFIG["num_workers"],
         shuffle=True,
+        pin_memory=True,
         drop_last=True
     )
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
         batch_size=CONFIG["valid_batch_size"],
         num_workers=CONFIG["num_workers"],
-        shuffle=False
+        shuffle=False,
+        pin_memory=True
     )
     
     return train_loader, valid_loader
@@ -358,36 +363,14 @@ def main():
     CONFIG['T_max'] = df.shape[0] * (CONFIG["n_fold"]-1) * CONFIG['epochs'] // CONFIG['train_batch_size'] // CONFIG["n_fold"]
     
     # Create folds
-    # gkf = GroupKFold(n_splits=CONFIG["n_fold"])
-    # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
-    # for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
-    #     df.loc[val, "kfold"] = fold
-    df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"])
-    train_dataset = UNSW_NB15_Dataset(df_train, CONFIG)
-    valid_dataset = UNSW_NB15_Dataset(df_valid, CONFIG)
-    
-    # Create data loaders for training and validation
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=CONFIG["train_batch_size"],
-        num_workers=CONFIG["num_workers"],
-        shuffle=True,
-        pin_memory=True,
-        drop_last=True
-    )
-    valid_loader = torch.utils.data.DataLoader(
-        valid_dataset,
-        batch_size=CONFIG["valid_batch_size"],
-        num_workers=CONFIG["num_workers"],
-        pin_memory=True,
-        shuffle=False
-    )
-    
-    print(f"[INFO] Training on {len(df_train)} samples and validating on {len(df_valid)} samples.")
+    gkf = GroupKFold(n_splits=CONFIG["n_fold"])
+    sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
+    for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
+        df.loc[val, "kfold"] = fold
     
     # Get dataloaders
-    # train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
-    CONFIG["input_dim"] = df.shape[1] - 1
+    train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
+    CONFIG["input_dim"] = train_loader.dataset[0]["x"].shape[0]
     
     # Initialize model
     model = fetch_model(CONFIG)
