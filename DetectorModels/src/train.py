@@ -12,7 +12,7 @@ from sklearn.model_selection import GroupKFold, StratifiedGroupKFold
 import torch
 import torch.utils
 import torch.utils.data
-import tqdm
+from tqdm import tqdm
 import copy
 from data.data_loading import load_data
 from data.dataset import UNSW_NB15_Dataset
