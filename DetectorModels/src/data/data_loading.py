@@ -7,7 +7,7 @@ def load_data(csv_path, CONFIG):
     df = pd.read_csv(csv_path)
     
     if CONFIG["debug"]:
-        df = df[:100000]
+        df = df[:10000]
     
     df = process_data(df)
     
