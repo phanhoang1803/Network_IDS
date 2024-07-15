@@ -8,7 +8,7 @@ import os
 import time
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import GroupKFold, StratifiedGroupKFold
+from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split
 import torch
 import torch.utils
 import torch.utils.data
@@ -355,12 +355,32 @@ def main():
     
     # Create folds
     # gkf = GroupKFold(n_splits=CONFIG["n_fold"])
-    sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
-    for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
-        df.loc[val, "kfold"] = fold
+    # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
+    # for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
+    #     df.loc[val, "kfold"] = fold
+    
+    df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"])
+    train_dataset = UNSW_NB15_Dataset(df_train, CONFIG)
+    valid_dataset = UNSW_NB15_Dataset(df_valid, CONFIG)
+    
+    # Create data loaders for training and validation
+    train_loader = torch.utils.data.DataLoader(
+        train_dataset,
+        batch_size=CONFIG["train_batch_size"],
+        num_workers=CONFIG["num_workers"],
+        shuffle=True,
+        drop_last=True
+    )
+    valid_loader = torch.utils.data.DataLoader(
+        valid_dataset,
+        batch_size=CONFIG["valid_batch_size"],
+        num_workers=CONFIG["num_workers"],
+        shuffle=False
+    )
+    
     
     # Get dataloaders
-    train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
+    # train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
     CONFIG["input_dim"] = df.shape[1] - 2
     
     # Initialize model
