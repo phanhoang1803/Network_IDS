@@ -85,8 +85,8 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         #     Train_Acc=epoch_acc
         # )
         progress_bar.set_postfix(
-            Train_Acc=f"{(running_correct / len(dataloader.dataset)).item():.4f}", 
-            Train_Loss=f"{(running_loss / len(dataloader.dataset)).item():.4f}"
+            Train_Acc=f"{epoch_acc:.4f}", 
+            Train_Loss=f"{epoch_loss:.4f}"
         )
         
         
