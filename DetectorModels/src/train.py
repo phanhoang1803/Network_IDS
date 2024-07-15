@@ -37,54 +37,31 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     """
     model.train()
     
-    # Initialize the variables to keep track of the running loss and correct predictions
-    dataset_size = 0
-    running_loss = 0.0
-    running_correct = 0.0
-    
-    # Create a tqdm bar to display the progress
-    train_bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    for step, data in train_bar:
-        x = data["x"].to(device, dtype=torch.float)
-        y = data["y"].to(device, dtype=torch.long)
-        
-        # print(x.shape, "\n", y.shape)
-        
+    running_loss = torch.zeros(1, dtype=torch.float32, device=device)
+    running_correct = torch.zeros(1, dtype=torch.int64, device=device)
+    dataset_size = torch.zeros(1, dtype=torch.int64, device=device)
+
+    for data in tqdm(dataloader):
+        x, y = data["x"].to(device, dtype=torch.float), data["y"].to(device, dtype=torch.long)
         batch_size = x.size(0)
 
-        # Forward pass
+        optimizer.zero_grad()
         outputs = model(x)
-        
-        # Calculate the loss
         loss = criterion(outputs, y)
         loss.backward()
-
-        # Update the weights
         optimizer.step()
-        optimizer.zero_grad()
 
         if scheduler is not None:
-            # Update the learning rate
             scheduler.step()
 
-        # Update the running loss and correct predictions
         running_loss += loss.item() * batch_size
         _, preds = torch.max(outputs, 1)
-        running_correct += torch.sum(preds == y.data).item()
-        
+        running_correct += torch.sum(preds == y.data)
         dataset_size += batch_size
-        
-        epoch_loss = running_loss / dataset_size
-        epoch_acc = running_correct / dataset_size
-        
-        # Update bar
-        train_bar.set_postfix(
-            Epoch=epoch,
-            Train_Loss=epoch_loss,
-            Train_Acc=epoch_acc
-        )
-        
-    # Clean up memory
+
+    epoch_loss = running_loss.item() / dataset_size.item()
+    epoch_acc = running_correct.item() / dataset_size.item()
+    
     gc.collect()
     
     return epoch_loss, epoch_acc
