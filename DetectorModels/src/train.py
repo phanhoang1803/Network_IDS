@@ -43,9 +43,8 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     running_correct = 0.0
     
     # Create a tqdm bar to display the progress
-    # bar = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))
-    progress_bar = tqdm(dataloader, desc=f'Epoch {epoch+1}/{50}', leave=False, dynamic_ncols=True)
-    for step, data in enumerate(dataloader):
+    bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for step, data in bar:
         x = data["x"].to(device, dtype=torch.float)
         y = data["y"].to(device, dtype=torch.long)
         
@@ -79,22 +78,18 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         epoch_acc = running_correct / dataset_size
         
         # Update bar
-        # bar.set_postfix(
-        #     Epoch=epoch,
-        #     Train_Loss=epoch_loss,
-        #     Train_Acc=epoch_acc
-        # )
-        progress_bar.set_postfix(
-            Train_Acc=f"{epoch_acc:.4f}", 
-            Train_Loss=f"{epoch_loss:.4f}"
+        bar.set_postfix(
+            Epoch=epoch,
+            Train_Loss=epoch_loss,
+            Train_Acc=epoch_acc
         )
-        
         
     # Clean up memory
     gc.collect()
     
     return epoch_loss, epoch_acc
-        
+
+@torch.inference_mode()        
 def valid_epoch(model, dataloader, epoch, device, CONFIG):
     """
     Evaluate the model on the validation dataset.
@@ -121,8 +116,7 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
     # Create a tqdm bar to display the progress
     bar = tqdm(enumerate(dataloader), total=len(dataloader))
     print("Length of dataloader: ", len(dataloader))
-    # Iterate over the validation dataset
-    for data in dataloader:
+    for step, data in bar:
         # Move the data to the device
         x = data["x"].to(device, dtype=torch.float)
         y = data["y"].to(device, dtype=torch.long)
