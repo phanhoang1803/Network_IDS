@@ -9,7 +9,7 @@ import time
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split
+from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split, KFold
 import torch
 import torch.utils
 import torch.utils.data
@@ -327,6 +327,10 @@ def prepare_loaders(df, fold, CONFIG):
     df_train = df[df.kfold != fold].reset_index(drop=True)
     df_valid = df[df.kfold == fold].reset_index(drop=True)
     
+    # Print the shape of the training and validation sets
+    print(f"Training set shape: {df_train.shape}")
+    print(f"Validation set shape: {df_valid.shape}")
+    
     # Create datasets for training and validation
     train_dataset = UNSW_NB15_Dataset(df_train, CONFIG)
     valid_dataset = UNSW_NB15_Dataset(df_valid, CONFIG)
@@ -359,17 +363,21 @@ def main():
     train_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_training-set.csv")
     df = load_data(train_csv, CONFIG)
     
+    print(df.info())
+    
     # Set T-max
     CONFIG['T_max'] = df.shape[0] * (CONFIG["n_fold"]-1) * CONFIG['epochs'] // CONFIG['train_batch_size'] // CONFIG["n_fold"]
     
     # Create folds
     gkf = GroupKFold(n_splits=CONFIG["n_fold"])
     sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
-    for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
+    kf = KFold(n_splits=CONFIG["n_fold"])
+    for fold, (_, val) in enumerate(kf.split(X=df, y=df["label"], groups=None)):
         df.loc[val, "kfold"] = fold
     
     # Get dataloaders
     train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
+    
     CONFIG["input_dim"] = train_loader.dataset[0]["x"].shape[0]
     
     # Initialize model
