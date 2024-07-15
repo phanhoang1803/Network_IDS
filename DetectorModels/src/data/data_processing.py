@@ -3,6 +3,25 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OneHotEncoder
 
+def generate_features(df):
+    # Duration
+    # df['duration'] = df['Ltime'] - df['Stime']
+    
+    # Ratios
+    df['byte_ratio'] = df['sbytes'] / (df['dbytes'] + 1)
+    df['tcp_setup_ratio'] = df['tcprtt'] / (df['synack'] + df['ackdat'] + 1)
+    
+    # Aggregate Features
+    df['total_bytes'] = df['sbytes'] + df['dbytes']
+    df['total_tcp_setup'] = df['tcprtt'] + df['synack'] + df['ackdat']
+    
+    # Interaction Features
+    
+    # Statistical Features
+    df['tcp_seq_diff'] = df['stcpb'] - df['dtcpb']
+    
+    return df
+
 def process_data(df):
     """
     This processing function is based on: https://www.kaggle.com/code/carlkirstein/unsw-nb15-modelling-97-7/notebook

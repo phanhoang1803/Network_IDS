@@ -9,6 +9,8 @@ def load_data(csv_path, CONFIG):
     if CONFIG["debug"]:
         df = df[:10000]
     
+    df = generate_features(df)
+    
     df = process_data(df)
     
     return df
