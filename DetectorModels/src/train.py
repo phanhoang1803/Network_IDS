@@ -224,7 +224,7 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
         # Print epoch summary
         print(f"[INFO] Epoch {epoch} | "
               f"Train Loss: {train_epoch_loss:.4f} | Train Acc: {train_epoch_acc:.4f} | "
-              f"Valid Loss: {valid_epoch_loss:.4f} | Valid Acc: {valid_epoch_acc:.4f}")
+              f"Valid Loss: {valid_epoch_loss:.4f} | Valid Acc: {valid_epoch_acc:.4f}\n")
         
     end = time.time()
     time_elapsed = end - start
