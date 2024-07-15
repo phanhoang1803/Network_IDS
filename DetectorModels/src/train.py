@@ -9,7 +9,7 @@ import time
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split, KFold
+from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split, StratifiedKFold
 import torch
 import torch.utils
 import torch.utils.data
@@ -371,54 +371,71 @@ def main():
     # Create folds
     # gkf = GroupKFold(n_splits=CONFIG["n_fold"])
     # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
+    skf = StratifiedKFold(n_splits=CONFIG["n_fold"])
     # kf = KFold(n_splits=CONFIG["n_fold"])
-    # for fold, (_, val) in enumerate(kf.split(X=df, y=df["label"], groups=None)):
-    #     df.loc[val, "kfold"] = fold
+    for fold, (_, val) in enumerate(skf.split(X=df, y=df["label"], groups=None)):
+        df.loc[val, "kfold"] = fold
     
-    df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"], shuffle=True)
-    df_train["kfold"] = -1
-    df_valid["kfold"] = args.fold
+    # df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"], shuffle=True)
+    # df_train["kfold"] = -1
+    # df_valid["kfold"] = args.fold
     
-    df = pd.concat([df_train, df_valid], axis=0).reset_index(drop=True)
+    # df = pd.concat([df_train, df_valid], axis=0).reset_index(drop=True)
     
-    # Get dataloaders
-    train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
-    
-    CONFIG["input_dim"] = train_loader.dataset[0]["x"].shape[0]
-    
-    # Initialize model
-    model = fetch_model(CONFIG)
-    model.to(CONFIG["device"])
-    
-    # Get optimizer and scheduler
-    optimizer = fetch_optimizer(model, CONFIG)
-    scheduler = fetch_scheduler(optimizer, CONFIG)
-    
-    # Train the model
-    model, history = train(model=model,
-                           train_loader=train_loader,
-                           valid_loader=valid_loader,
-                           optimizer=optimizer,
-                           scheduler=scheduler,
-                           device=CONFIG["device"],
-                           CONFIG=CONFIG)
-    
-    history = pd.DataFrame.from_dict(history)
-    history.to_csv(os.path.join(CONFIG["save_dir"], "history.csv"), index=False)
-    
-    # Test
-    test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
-    df_test = load_data(test_csv, CONFIG)
-    test_dataset = UNSW_NB15_Dataset(df_test, CONFIG)
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=CONFIG["valid_batch_size"],
-        num_workers=CONFIG["num_workers"],
-        pin_memory=True,
-        shuffle=False
-    )
-    
-    test(model, test_loader, CONFIG["device"], CONFIG)
+    test_res = []
+    for fold in args.folds:
+        print(f"====== FOLD {fold} ======")
+        # Get dataloaders
+        train_loader, valid_loader = prepare_loaders(df, fold=fold, CONFIG=CONFIG)
+        
+        CONFIG["input_dim"] = train_loader.dataset[0]["x"].shape[0]
+        
+        # Initialize model
+        model = fetch_model(CONFIG)
+        model.to(CONFIG["device"])
+        
+        # Get optimizer and scheduler
+        optimizer = fetch_optimizer(model, CONFIG)
+        scheduler = fetch_scheduler(optimizer, CONFIG)
+        
+        # Train the model
+        model, history = train(model=model,
+                            train_loader=train_loader,
+                            valid_loader=valid_loader,
+                            optimizer=optimizer,
+                            scheduler=scheduler,
+                            device=CONFIG["device"],
+                            CONFIG=CONFIG)
+        
+        history = pd.DataFrame.from_dict(history)
+        history.to_csv(os.path.join(CONFIG["save_dir"], "history.csv"), index=False)
+        
+        # Test
+        test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
+        df_test = load_data(test_csv, CONFIG)
+        test_dataset = UNSW_NB15_Dataset(df_test, CONFIG)
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=CONFIG["valid_batch_size"],
+            num_workers=CONFIG["num_workers"],
+            pin_memory=True,
+            shuffle=False
+        )
+        
+        accuracy, f1, recall, precision = test(model, test_loader, CONFIG["device"], CONFIG)
+        
+        # Append results
+        test_res.append({
+            "fold": fold,
+            "accuracy": accuracy,
+            "f1": f1,
+            "recall": recall,
+            "precision": precision
+        })
+
+    # Save results
+    test_res = pd.DataFrame(test_res)
+    test_res.to_csv(os.path.join(CONFIG["save_dir"], "test_results.csv"), index=False)
     
 if __name__ == "__main__":
     main()

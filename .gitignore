@@ -1,2 +1,4 @@
 data/
 *.bin
+ckpts/
+*.csv
