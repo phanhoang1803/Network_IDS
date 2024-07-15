@@ -51,13 +51,15 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         batch_size = x.size(0)
 
         # Forward pass
-        outputs = model(x).detach()
+        outputs = model(x)
         
         # Calculate the loss
         loss = criterion(outputs, y)
         
         # Backward pass
         loss.backward()
+
+        outputs = outputs.detach()
 
         # Update the weights
         optimizer.step()
