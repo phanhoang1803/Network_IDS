@@ -56,14 +56,12 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         # Calculate the loss
         loss = criterion(outputs, y)
         
-        # Zero the parameter gradients
-        optimizer.zero_grad()
-        
         # Backward pass
         loss.backward()
 
         # Update the weights
         optimizer.step()
+        optimizer.zero_grad()
 
         if scheduler is not None:
             # Update the learning rate
