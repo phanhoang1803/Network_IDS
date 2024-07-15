@@ -369,11 +369,17 @@ def main():
     CONFIG['T_max'] = df.shape[0] * (CONFIG["n_fold"]-1) * CONFIG['epochs'] // CONFIG['train_batch_size'] // CONFIG["n_fold"]
     
     # Create folds
-    gkf = GroupKFold(n_splits=CONFIG["n_fold"])
-    sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
-    kf = KFold(n_splits=CONFIG["n_fold"])
-    for fold, (_, val) in enumerate(kf.split(X=df, y=df["label"], groups=None)):
-        df.loc[val, "kfold"] = fold
+    # gkf = GroupKFold(n_splits=CONFIG["n_fold"])
+    # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
+    # kf = KFold(n_splits=CONFIG["n_fold"])
+    # for fold, (_, val) in enumerate(kf.split(X=df, y=df["label"], groups=None)):
+    #     df.loc[val, "kfold"] = fold
+    
+    df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"], shuffle=True)
+    df_train["kfold"] = -1
+    df_valid["kfold"] = args.fold
+    
+    df = pd.concat([df_train, df_valid], axis=0).reset_index(drop=True)
     
     # Get dataloaders
     train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
