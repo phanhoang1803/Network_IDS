@@ -120,7 +120,7 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
     
     # Create a tqdm bar to display the progress
     bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    
+    print("Length of dataloader: ", len(dataloader))
     # Iterate over the validation dataset
     for data in dataloader:
         # Move the data to the device
