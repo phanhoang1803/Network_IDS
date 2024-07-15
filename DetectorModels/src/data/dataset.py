@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 class UNSW_NB15_Dataset(Dataset):
     def __init__(self, df, CONFIG=None):
         self.df = df
-        self.x_data = df.drop(columns=["label", "kfold"]).values.astype(np.float32)
+        self.x_data = df.drop(columns=["label"]).values.astype(np.float32)
         self.y_data = df["label"].values.astype(np.float32)
         
     def __len__(self):

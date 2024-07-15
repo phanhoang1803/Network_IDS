@@ -8,6 +8,7 @@ import os
 import time
 import numpy as np
 import pandas as pd
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split
 import torch
 import torch.utils
@@ -207,6 +208,38 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
     
     return model, history
     
+def test(model, test_loader, device, CONFIG):
+    model.eval()
+    
+    all_labels = []
+    all_preds = []
+    
+    with torch.no_grad():
+        for data in tqdm(test_loader, total=len(test_loader)):
+            # Move the data to the device
+            x = data["x"].to(device, dtype=torch.float)
+            y = data["y"].to(device, dtype=torch.long)
+            
+            outputs = model(x)
+            _, preds = torch.max(outputs, 1)
+            
+            all_labels.extend(y.cpu().numpy())
+            all_preds.extend(preds.cpu().numpy())
+    
+    # Compute metrics
+    accuracy = accuracy_score(all_labels, all_preds)
+    f1 = f1_score(all_labels, all_preds, average='weighted')
+    recall = recall_score(all_labels, all_preds, average='weighted')
+    precision = precision_score(all_labels, all_preds, average='weighted')
+    
+    # Print or log metrics
+    print(f'Accuracy: {accuracy:.4f}')
+    print(f'F1 Score: {f1:.4f}')
+    print(f'Recall: {recall:.4f}')
+    print(f'Precision: {precision:.4f}')
+    
+    return accuracy, f1, recall, precision
+
 def fetch_scheduler(optimizer, CONFIG):
     """
     Fetches a scheduler based on the configuration.
@@ -329,7 +362,6 @@ def main():
     # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
     # for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
     #     df.loc[val, "kfold"] = fold
-    df["kfold"] = -1
     df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"])
     train_dataset = UNSW_NB15_Dataset(df_train, CONFIG)
     valid_dataset = UNSW_NB15_Dataset(df_valid, CONFIG)
@@ -355,7 +387,7 @@ def main():
     
     # Get dataloaders
     # train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
-    CONFIG["input_dim"] = df.shape[1] - 2
+    CONFIG["input_dim"] = df.shape[1] - 1
     
     # Initialize model
     model = fetch_model(CONFIG)
@@ -376,6 +408,20 @@ def main():
     
     history = pd.DataFrame.from_dict(history)
     history.to_csv(os.path.join(CONFIG["save_dir"], "history.csv"), index=False)
+    
+    # Test
+    test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
+    df_test = load_data(test_csv, CONFIG)
+    test_dataset = UNSW_NB15_Dataset(df_test, CONFIG)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=CONFIG["valid_batch_size"],
+        num_workers=CONFIG["num_workers"],
+        pin_memory=True,
+        shuffle=False
+    )
+    
+    test(model, test_loader, CONFIG["device"], CONFIG)
     
 if __name__ == "__main__":
     main()
