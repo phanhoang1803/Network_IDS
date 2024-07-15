@@ -42,6 +42,7 @@ def parse_args():
     parser.add_argument("--num_classes", type=int, default=10, help="Number of classes")
     parser.add_argument("--n_fold", type=int, default=5, help="Number of folds")
     parser.add_argument("--fold", type=int, default=0, help="Fold")
+    parser.add_argument("--debug", action="store_true", help="Debug mode")
     
     args = parser.parse_args()
     CONFIG = vars(args)
