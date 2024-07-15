@@ -358,7 +358,7 @@ def main():
     # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
     # for fold, (_, val) in enumerate(sgkf.split(X=df, y=df["label"], groups=None)):
     #     df.loc[val, "kfold"] = fold
-    
+    df["kfold"] = -1
     df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"])
     train_dataset = UNSW_NB15_Dataset(df_train, CONFIG)
     valid_dataset = UNSW_NB15_Dataset(df_valid, CONFIG)
