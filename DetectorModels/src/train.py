@@ -19,15 +19,87 @@ from data.dataset import UNSW_NB15_Dataset
 from model.criterion import criterion
 from utils.utils import fetch_model, parse_args, set_seed, make_dir
 
+# def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
+#     """
+#     Train the model for one epoch.
+
+#     Args:
+#         model (nn.Module): The model to be trained.
+#         dataloader (torch.utils.data.DataLoader): The data loader for the training dataset.
+#         optimizer (torch.optim.Optimizer): The optimizer for the model.
+#         scheduler (torch.optim.lr_scheduler._LRScheduler, optional): The learning rate scheduler for the optimizer. Defaults to None.
+#         epoch (int): The current epoch number.
+#         device (torch.device): The device to run the model on.
+#         CONFIG (dict): The configuration dictionary.
+
+#     Returns:
+#         tuple: A tuple containing the epoch loss and epoch accuracy.
+#     """
+#     model.train()
+    
+#     # Initialize the variables to keep track of the running loss and correct predictions
+#     dataset_size = 0
+#     running_loss = 0.0
+#     running_correct = 0.0
+    
+#     # Create a tqdm bar to display the progress
+#     train_bar = tqdm(enumerate(dataloader), total=len(dataloader))
+#     for step, data in train_bar:
+#         x = data["x"].to(device, dtype=torch.float)
+#         y = data["y"].to(device, dtype=torch.long)
+        
+#         batch_size = x.size(0)
+
+#         optimizer.zero_grad()
+#         outputs = model(x)
+        
+#         loss = criterion(outputs, y)
+#         loss.backward()
+
+#         # Update the weights
+#         optimizer.step()
+
+#         if scheduler is not None:
+#             # Update the learning rate
+#             scheduler.step()
+
+#         # Update the running loss and correct predictions
+#         running_loss += loss.item() * batch_size
+#         _, preds = torch.max(outputs, 1)
+#         running_correct += torch.sum(preds == y.data).item()
+        
+#         dataset_size += batch_size
+        
+#         epoch_loss = running_loss / dataset_size
+#         epoch_acc = running_correct / dataset_size
+        
+#         # Update bar
+#         # train_bar.set_postfix(
+#         #     Epoch=epoch,
+#         #     Train_Loss=epoch_loss,
+#         #     Train_Acc=epoch_acc
+#         # )
+#         train_bar.set_postfix(Loss=epoch_loss, Accuracy=epoch_acc)
+        
+#     # Clean up memory
+#     # gc.collect()
+    
+#     return epoch_loss, epoch_acc
+
+import torch
+from tqdm import tqdm
+from torch.cuda.amp import autocast, GradScaler
+
 def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     """
-    Train the model for one epoch.
+    Train the model for one epoch with optimizations.
 
     Args:
         model (nn.Module): The model to be trained.
         dataloader (torch.utils.data.DataLoader): The data loader for the training dataset.
         optimizer (torch.optim.Optimizer): The optimizer for the model.
         scheduler (torch.optim.lr_scheduler._LRScheduler, optional): The learning rate scheduler for the optimizer. Defaults to None.
+        criterion (nn.Module): The loss function.
         epoch (int): The current epoch number.
         device (torch.device): The device to run the model on.
         CONFIG (dict): The configuration dictionary.
@@ -37,54 +109,45 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     """
     model.train()
     
-    # Initialize the variables to keep track of the running loss and correct predictions
-    dataset_size = 0
     running_loss = 0.0
-    running_correct = 0.0
+    running_correct = 0
+    dataset_size = 0
     
-    # Create a tqdm bar to display the progress
-    train_bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    for step, data in train_bar:
+    scaler = GradScaler()
+
+    train_bar = tqdm(dataloader, desc=f"Epoch {epoch}", total=len(dataloader))
+
+    for data in train_bar:
         x = data["x"].to(device, dtype=torch.float)
         y = data["y"].to(device, dtype=torch.long)
         
         batch_size = x.size(0)
-
-        optimizer.zero_grad()
-        outputs = model(x)
         
-        loss = criterion(outputs, y)
-        loss.backward()
-
-        # Update the weights
-        optimizer.step()
+        optimizer.zero_grad()
+        
+        with autocast():
+            outputs = model(x)
+            loss = criterion(outputs, y)
+        
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         if scheduler is not None:
-            # Update the learning rate
             scheduler.step()
 
-        # Update the running loss and correct predictions
         running_loss += loss.item() * batch_size
         _, preds = torch.max(outputs, 1)
-        running_correct += torch.sum(preds == y.data).item()
+        running_correct += torch.sum(preds == y).item()
         
         dataset_size += batch_size
         
         epoch_loss = running_loss / dataset_size
         epoch_acc = running_correct / dataset_size
-        
-        # Update bar
-        # train_bar.set_postfix(
-        #     Epoch=epoch,
-        #     Train_Loss=epoch_loss,
-        #     Train_Acc=epoch_acc
-        # )
         train_bar.set_postfix(Loss=epoch_loss, Accuracy=epoch_acc)
-        
-    # Clean up memory
-    # gc.collect()
-    
+
     return epoch_loss, epoch_acc
+
 
 @torch.inference_mode()        
 def valid_epoch(model, dataloader, epoch, device, CONFIG):
@@ -368,12 +431,14 @@ def main():
         batch_size=CONFIG["train_batch_size"],
         num_workers=CONFIG["num_workers"],
         shuffle=True,
+        pin_memory=True,
         drop_last=True
     )
     valid_loader = torch.utils.data.DataLoader(
         valid_dataset,
         batch_size=CONFIG["valid_batch_size"],
         num_workers=CONFIG["num_workers"],
+        pin_memory=True,
         shuffle=False
     )
     
