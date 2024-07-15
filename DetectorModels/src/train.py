@@ -50,20 +50,14 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         
         batch_size = x.size(0)
 
-        # Forward pass
+        optimizer.zero_grad()
         outputs = model(x)
         
-        # Calculate the loss
         loss = criterion(outputs, y)
-        
-        # Backward pass
         loss.backward()
-
-        outputs = outputs.detach()
 
         # Update the weights
         optimizer.step()
-        optimizer.zero_grad()
 
         if scheduler is not None:
             # Update the learning rate
@@ -80,11 +74,12 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         epoch_acc = running_correct / dataset_size
         
         # Update bar
-        train_bar.set_postfix(
-            Epoch=epoch,
-            Train_Loss=epoch_loss,
-            Train_Acc=epoch_acc
-        )
+        # train_bar.set_postfix(
+        #     Epoch=epoch,
+        #     Train_Loss=epoch_loss,
+        #     Train_Acc=epoch_acc
+        # )
+        train_bar.set_postfix(Loss=epoch_loss, Accuracy=epoch_acc)
         
     # Clean up memory
     # gc.collect()
