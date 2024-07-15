@@ -20,22 +20,17 @@ class MLP(nn.Module):
         self.hidden_dims = hidden_dims
         self.output_dim = output_dim
         
-        self.model = nn.Sequential()
+        layers = []
+        in_features = input_dim
+        for i, out_features in enumerate(hidden_dims):
+            layers.append(nn.Linear(in_features, out_features))
+            layers.append(nn.ReLU())
+            in_features = out_features
         
-        # First hidden layer
-        self.model.add_module("linear_0", nn.Linear(self.input_dim, self.hidden_dims[0]))
-        self.model.add_module("relu_0", nn.ReLU())
+        layers.append(nn.Linear(hidden_dims[-1], output_dim))
+        layers.append(nn.Softmax(dim=1))
         
-        # Add more hidden layers if specified
-        for i in range(1, len(self.hidden_dims)):
-            self.model.add_module("linear_{}".format(i), nn.Linear(self.hidden_dims[i-1], self.hidden_dims[i]))
-            self.model.add_module("relu_{}".format(i), nn.ReLU())
-        
-        # Output layer
-        self.model.add_module("linear_{}".format(len(self.hidden_dims)), nn.Linear(self.hidden_dims[-1], self.output_dim))
-        
-        # Softmax activation for the output layer
-        self.model.add_module("softmax", nn.Softmax(dim=1))
+        self.model = nn.Sequential(*layers)
     
     def forward(self, x):
         return self.model(x)
