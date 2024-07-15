@@ -43,8 +43,8 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     running_correct = 0.0
     
     # Create a tqdm bar to display the progress
-    bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    for step, data in bar:
+    train_bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for step, data in train_bar:
         x = data["x"].to(device, dtype=torch.float)
         y = data["y"].to(device, dtype=torch.long)
         
@@ -78,7 +78,7 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         epoch_acc = running_correct / dataset_size
         
         # Update bar
-        bar.set_postfix(
+        train_bar.set_postfix(
             Epoch=epoch,
             Train_Loss=epoch_loss,
             Train_Acc=epoch_acc
@@ -114,9 +114,8 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
     running_correct = 0.0
     
     # Create a tqdm bar to display the progress
-    bar = tqdm(enumerate(dataloader), total=len(dataloader))
-    print("Length of dataloader: ", len(dataloader))
-    for step, data in bar:
+    valid_bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for step, data in valid_bar:
         # Move the data to the device
         x = data["x"].to(device, dtype=torch.float)
         y = data["y"].to(device, dtype=torch.long)
@@ -140,7 +139,7 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
         epoch_acc = running_correct / dataset_size
         
         # Update the tqdm bar
-        bar.set_postfix(
+        valid_bar.set_postfix(
             Epoch=epoch,
             Valid_Loss=epoch_loss,
             Valid_Acc=epoch_acc
@@ -210,7 +209,7 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
         
         # Check if validation accuracy improved
         if best_epoch_acc < valid_epoch_acc:
-            print(f"[INFO] Validation accuracy increased from {best_epoch_acc:.4f} to {valid_epoch_acc:.4f}. Saving model...")
+            print(f"[INFO] Validation accuracy increased from {best_epoch_acc:.4f} --> {valid_epoch_acc:.4f}. Saving model...")
             best_epoch_acc = valid_epoch_acc
             current_patience = 0
             best_model = copy.deepcopy(model.state_dict())
