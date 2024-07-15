@@ -54,6 +54,6 @@ def parse_args():
     
 def fetch_model(CONFIG):
     if CONFIG["model_name"] == "MLP":
-        model = MLP(input_dim=CONFIG["input_dim"], hidden_dims=[64, 32], output_dim=2)
+        model = MLP(input_dim=CONFIG["input_dim"], hidden_dims=[128, 64], output_dim=2)
     
     return model
