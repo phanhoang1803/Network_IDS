@@ -43,7 +43,8 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     running_correct = 0.0
     
     # Create a tqdm bar to display the progress
-    bar = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))
+    # bar = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))
+    progress_bar = tqdm(dataloader, desc=f'Epoch {epoch+1}/{50}', leave=False, dynamic_ncols=True)
     for step, data in enumerate(dataloader):
         x = data["x"].to(device, dtype=torch.float)
         y = data["y"].to(device, dtype=torch.long)
@@ -78,11 +79,16 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
         epoch_acc = running_correct / dataset_size
         
         # Update bar
-        bar.set_postfix(
-            Epoch=epoch,
-            Train_Loss=epoch_loss,
-            Train_Acc=epoch_acc
+        # bar.set_postfix(
+        #     Epoch=epoch,
+        #     Train_Loss=epoch_loss,
+        #     Train_Acc=epoch_acc
+        # )
+        progress_bar.set_postfix(
+            Train_Acc=f"{(running_correct.double() / len(dataloader.dataset)).item():.4f}", 
+            Train_Loss=f"{(running_loss / len(dataloader.dataset)).item():.4f}"
         )
+        
         
     # Clean up memory
     gc.collect()
@@ -119,7 +125,7 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
     for data in dataloader:
         # Move the data to the device
         x = data["x"].to(device, dtype=torch.float)
-        y = data["y"].to(device, dtype=torch.float)
+        y = data["y"].to(device, dtype=torch.long)
         
         # Get the batch size
         batch_size = x.size(0)
