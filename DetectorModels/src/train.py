@@ -188,7 +188,7 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
             current_patience = 0
             best_model = copy.deepcopy(model.state_dict())
             
-            torch.save(model.state_dict(), os.path.join(CONFIG["save_dir"], "best_model.bin"))
+            torch.save(model.state_dict(), os.path.join(CONFIG["save_dir"], "best_model_fold_{}.bin"))
         else:
             current_patience += 1
             if current_patience >= patience:
