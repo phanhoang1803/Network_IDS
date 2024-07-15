@@ -119,7 +119,7 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
     running_correct = 0.0
     
     # Create a tqdm bar to display the progress
-    bar = tqdm.tqdm(enumerate(dataloader), total=len(dataloader))
+    bar = tqdm(enumerate(dataloader), total=len(dataloader))
     
     # Iterate over the validation dataset
     for data in dataloader:
