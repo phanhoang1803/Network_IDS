@@ -45,7 +45,7 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     # Create a tqdm bar to display the progress
     train_bar = tqdm(dataloader, total=len(dataloader))
     for data in train_bar:
-        x = data["x"].to(device, dtype=torch.float, non_blocking=True)
+        x = data["x"].to(device, dtype=torch.float32, non_blocking=True)
         y = data["y"].to(device, dtype=torch.long, non_blocking=True)
         
         optimizer.zero_grad()
@@ -62,7 +62,7 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
             scheduler.step()
 
         # Update the running loss and correct predictions
-        running_loss += loss.item() * x.size(0)
+        running_loss += loss.detach().item() * x.size(0)
         _, preds = torch.max(outputs, 1)
         running_correct += (preds == y).sum().item()
         
@@ -112,7 +112,7 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
             loss = criterion(outputs, y)
 
             # Update the running loss and correct predictions
-            running_loss += loss.item() * x.size(0)
+            running_loss += loss.detach().item() * x.size(0)
             _, preds = torch.max(outputs, 1)
             running_correct += torch.sum(preds == y).item()
             
@@ -226,8 +226,8 @@ def test(model, test_loader, device, CONFIG):
             outputs = model(x)
             _, preds = torch.max(outputs, 1)
             
-            all_labels.extend(y.cpu().numpy())
-            all_preds.extend(preds.cpu().numpy())
+            all_labels.extend(y.cpu().detach().numpy())
+            all_preds.extend(preds.cpu().detach().numpy())
     
     # Compute metrics
     accuracy = accuracy_score(all_labels, all_preds)
