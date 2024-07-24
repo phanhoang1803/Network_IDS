@@ -369,8 +369,8 @@ def main():
     train_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_training-set.csv")
     df = load_data(train_csv, CONFIG)
     df, encoder, scaler = process_data(df)
-    joblib.dump(os.path.join(CONFIG["save_dir"], "encoder.pkl"))
-    joblib.dump(os.path.join(CONFIG["save_dir"], "scaler.pkl"))
+    joblib.dump(encoder, os.path.join(CONFIG["save_dir"], "encoder.pkl"))
+    joblib.dump(scaler, os.path.join(CONFIG["save_dir"], "scaler.pkl"))
     # print(df.info())
     
     # Set T-max
