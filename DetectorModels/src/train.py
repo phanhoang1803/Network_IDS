@@ -188,7 +188,7 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
             current_patience = 0
             best_model = copy.deepcopy(model.state_dict())
             
-            torch.save(model.state_dict(), os.path.join(CONFIG["save_dir"], "best_model_fold_{}.bin"))
+            torch.save(model.state_dict(), os.path.join(CONFIG["save_dir"], f"best_model.bin"))
         else:
             current_patience += 1
             if current_patience >= patience:
@@ -208,6 +208,10 @@ def train(model, train_loader, valid_loader, optimizer, scheduler, device, CONFI
     
     # Load the best model
     model.load_state_dict(best_model)
+    
+    # Save the model
+    model_scripted = torch.jit.script(model)
+    model_scripted.save(os.path.join(CONFIG["save_dir"], "model_scripted.pt"))
     
     return model, history
     
@@ -241,7 +245,7 @@ def test(model, test_loader, device, CONFIG):
     print(f'Recall: {recall:.4f}')
     print(f'Precision: {precision:.4f}')
     
-    return accuracy, f1, recall, precision
+    return accuracy, f1, recall, precision, all_preds
 
 def fetch_scheduler(optimizer, CONFIG):
     """
@@ -363,79 +367,64 @@ def main():
     train_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_training-set.csv")
     df = load_data(train_csv, CONFIG)
     
-    print(df.info())
+    # print(df.info())
     
     # Set T-max
     CONFIG['T_max'] = df.shape[0] * (CONFIG["n_fold"]-1) * CONFIG['epochs'] // CONFIG['train_batch_size'] // CONFIG["n_fold"]
     
-    # Create folds
-    # gkf = GroupKFold(n_splits=CONFIG["n_fold"])
-    # sgkf = StratifiedGroupKFold(n_splits=CONFIG["n_fold"])
-    skf = StratifiedKFold(n_splits=CONFIG["n_fold"])
-    # kf = KFold(n_splits=CONFIG["n_fold"])
-    for fold, (_, val) in enumerate(skf.split(X=df, y=df["label"], groups=None)):
-        df.loc[val, "kfold"] = fold
+    df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"], shuffle=True)
+    df_train["kfold"] = -1
+    df_valid["kfold"] = args.fold
     
-    # df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"], shuffle=True)
-    # df_train["kfold"] = -1
-    # df_valid["kfold"] = args.fold
+    df = pd.concat([df_train, df_valid], axis=0).reset_index(drop=True)
     
-    # df = pd.concat([df_train, df_valid], axis=0).reset_index(drop=True)
+    # Get dataloaders
+    train_loader, valid_loader = prepare_loaders(df, fold=args.fold, CONFIG=CONFIG)
+    CONFIG["input_dim"] = train_loader.dataset[0]["x"].shape[0]
     
-    test_res = []
-    for fold in args.folds:
-        print(f"====== FOLD {fold} ======")
-        # Get dataloaders
-        train_loader, valid_loader = prepare_loaders(df, fold=fold, CONFIG=CONFIG)
+    # Initialize model
+    model = fetch_model(CONFIG)
+    model.to(CONFIG["device"])
+    
+    # Get optimizer and scheduler
+    optimizer = fetch_optimizer(model, CONFIG)
+    scheduler = fetch_scheduler(optimizer, CONFIG)
+    
+    # Train the model
+    model, history = train(model=model,
+                        train_loader=train_loader,
+                        valid_loader=valid_loader,
+                        optimizer=optimizer,
+                        scheduler=scheduler,
+                        device=CONFIG["device"],
+                        CONFIG=CONFIG)
+    
+    history = pd.DataFrame.from_dict(history)
+    history.to_csv(os.path.join(CONFIG["save_dir"], "history.csv"), index=False)
+    
+    # ------------- Test PHASE -------------
+    test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
+    df_test = load_data(test_csv, CONFIG)
+    test_dataset = UNSW_NB15_Dataset(df_test, CONFIG)
+    test_loader = torch.utils.data.DataLoader(
+        test_dataset,
+        batch_size=CONFIG["valid_batch_size"],
+        num_workers=CONFIG["num_workers"],
+        pin_memory=True,
+        shuffle=False
+    )
+    
+    accuracy, f1, recall, precision, _ = test(model, test_loader, CONFIG["device"], CONFIG)
         
-        CONFIG["input_dim"] = train_loader.dataset[0]["x"].shape[0]
-        
-        # Initialize model
-        model = fetch_model(CONFIG)
-        model.to(CONFIG["device"])
-        
-        # Get optimizer and scheduler
-        optimizer = fetch_optimizer(model, CONFIG)
-        scheduler = fetch_scheduler(optimizer, CONFIG)
-        
-        # Train the model
-        model, history = train(model=model,
-                            train_loader=train_loader,
-                            valid_loader=valid_loader,
-                            optimizer=optimizer,
-                            scheduler=scheduler,
-                            device=CONFIG["device"],
-                            CONFIG=CONFIG)
-        
-        history = pd.DataFrame.from_dict(history)
-        history.to_csv(os.path.join(CONFIG["save_dir"], "history.csv"), index=False)
-        
-        # Test
-        test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
-        df_test = load_data(test_csv, CONFIG)
-        test_dataset = UNSW_NB15_Dataset(df_test, CONFIG)
-        test_loader = torch.utils.data.DataLoader(
-            test_dataset,
-            batch_size=CONFIG["valid_batch_size"],
-            num_workers=CONFIG["num_workers"],
-            pin_memory=True,
-            shuffle=False
-        )
-        
-        accuracy, f1, recall, precision = test(model, test_loader, CONFIG["device"], CONFIG)
-        
-        # Append results
-        test_res.append({
-            "fold": fold,
-            "accuracy": accuracy,
-            "f1": f1,
-            "recall": recall,
-            "precision": precision
-        })
-
     # Save results
-    test_res = pd.DataFrame(test_res)
-    test_res.to_csv(os.path.join(CONFIG["save_dir"], "test_results.csv"), index=False)
+    test_res = pd.DataFrame({
+        "accuracy": accuracy,
+        "f1": f1,
+        "recall": recall,
+        "precision": precision
+    })
+
+    test_res.to_csv(os.path.join(CONFIG["save_dir"], "test_result.csv"), index=False)
     
 if __name__ == "__main__":
     main()
