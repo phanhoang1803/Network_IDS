@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV, train_test_split
 from data.data_loading import load_data
 from data.data_processing import process_data
 from utils.utils import parse_args, set_seed, make_dir
@@ -13,7 +13,7 @@ import joblib
 
 def train_svm(X_train, y_train, X_valid, y_valid, CONFIG):
     """
-    Train a Support Vector Machine (SVM) model.
+    Train a Support Vector Machine (SVM) model with hyperparameter tuning.
 
     Args:
         X_train (pd.DataFrame): Training features.
@@ -25,22 +25,29 @@ def train_svm(X_train, y_train, X_valid, y_valid, CONFIG):
     Returns:
         model: Trained SVM model.
     """
-    model = SVC(
-        C=CONFIG["C"],
-        kernel=CONFIG["kernel"],
-        gamma=CONFIG["gamma"],
-        probability=True,
-        shrinking=CONFIG["shrinking"],
-        random_state=CONFIG["seed"],
-        verbose=True
+    # Scale features
+    param_grid = {
+        'C': [0.1, 1, 10, 100],
+        'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+        'gamma': ['scale', 'auto', 0.1, 1, 10]
+    }
+
+    model = GridSearchCV(
+        SVC(probability=True, shrinking=CONFIG["shrinking"], random_state=CONFIG["seed"]),
+        param_grid,
+        cv=3,
+        scoring='f1',
+        verbose=1,
+        n_jobs=-1
     )
-    
-    print("[INFO] Training SVM model...")
+
+    print("[INFO] Training SVM model with GridSearchCV...")
     start_time = time.time()
     model.fit(X_train, y_train)
     print(f"[INFO] Training completed in {time.time() - start_time:.2f} seconds.")
-    
-    return model
+    print(f"[INFO] Best parameters found: {model.best_params_}")
+
+    return model.best_estimator_
 
 def evaluate_model(model, X_test, y_test):
     """
@@ -54,6 +61,7 @@ def evaluate_model(model, X_test, y_test):
     Returns:
         dict: Dictionary with evaluation metrics.
     """
+
     y_pred_prob = model.predict_proba(X_test)[:, 1]
     y_pred = (y_pred_prob > 0.5).astype(int)
 
