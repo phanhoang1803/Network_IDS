@@ -1,9 +1,11 @@
 from flask import Flask
-from .model.load_model import load_intrusion_model
+from .model.load_model import load_intrusion_model, load_lgbm_model
 import os
 
-model = load_intrusion_model(os.getenv("MODEL_PATH", "ckpts/model_scripted.pt"))
-model.eval()
+mlp_model = load_intrusion_model(os.getenv("MLP_MODEL_PATH", "ckpts/model_scripted.pt"))
+mlp_model.eval()
+
+lgbm_model = load_lgbm_model(os.getenv("LGBM_MODEL_PATH", "ckpts/lgbm_model.txt"))
 
 def create_app():
     app = Flask(__name__)
