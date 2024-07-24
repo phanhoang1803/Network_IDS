@@ -67,7 +67,8 @@ def parse_args():
     parser.add_argument("--C", type=float, default=1.0, help="Regularization parameter for SVM")
     parser.add_argument("--kernel", type=str, default="rbf", help="Kernel type for SVM")
     parser.add_argument("--gamma", type=str, default="scale", help="Kernel coefficient for SVM")
-
+    parser.add_argument("--shrinking", type=bool, default=True, help="Whether to use the shrinking heuristic")
+    
     args = parser.parse_args()
     CONFIG = vars(args)
     return args, CONFIG

@@ -1,12 +1,14 @@
 import gc
 import os
 import time
+import joblib
 import numpy as np
 import pandas as pd
 import lightgbm as lgb
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split, StratifiedKFold
 from data.data_loading import load_data
+from data.data_processing import process_data
 from utils.utils import parse_args, set_seed, make_dir
 
 def train_lgbm(X_train, y_train, X_valid, y_valid, CONFIG):
@@ -36,7 +38,7 @@ def train_lgbm(X_train, y_train, X_valid, y_valid, CONFIG):
         'feature_fraction': CONFIG["feature_fraction"],
         'bagging_fraction': CONFIG["bagging_fraction"],
         'bagging_freq': CONFIG["bagging_freq"],
-        'verbose': -1,
+        'verbose': 1,
     }
 
     print("[INFO] Training LightGBM model...")
@@ -88,8 +90,9 @@ def main():
 
     train_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_training-set.csv")
     df = load_data(train_csv, CONFIG)
-
-    # print(df.info())
+    df, encoder, scaler = process_data(df)
+    joblib.dump(encoder, os.path.join(CONFIG["save_dir"], "encoder.pkl"))
+    joblib.dump(scaler, os.path.join(CONFIG["save_dir"], "scaler.pkl"))
 
     df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"])
 
@@ -106,6 +109,7 @@ def main():
     print("[INFO] Evaluating model on test set...")
     test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
     df_test = load_data(test_csv, CONFIG)
+    df_test, _, _ = process_data(df_test, encoder, scaler)
     X_test = df_test.drop(columns=["label"])
     y_test = df_test["label"]
 

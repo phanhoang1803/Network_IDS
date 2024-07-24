@@ -7,7 +7,9 @@ from sklearn.svm import SVC
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 from sklearn.model_selection import train_test_split
 from data.data_loading import load_data
+from data.data_processing import process_data
 from utils.utils import parse_args, set_seed, make_dir
+import joblib
 
 def train_svm(X_train, y_train, X_valid, y_valid, CONFIG):
     """
@@ -28,6 +30,7 @@ def train_svm(X_train, y_train, X_valid, y_valid, CONFIG):
         kernel=CONFIG["kernel"],
         gamma=CONFIG["gamma"],
         probability=True,
+        shrinking=CONFIG["shrinking"],
         random_state=CONFIG["seed"],
         verbose=True
     )
@@ -79,8 +82,12 @@ def main():
 
     train_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_training-set.csv")
     df = load_data(train_csv, CONFIG)
+    df, encoder, scaler = process_data(df)
 
-    # print(df.info())
+    encoder = joblib.dump(os.path.join(CONFIG["save_dir"], "encoder.pkl"))
+    scaler = joblib.dump(os.path.join(CONFIG["save_dir"], "scaler.pkl"))
+
+    print(df.info())
 
     df_train, df_valid = train_test_split(df, test_size=0.2, random_state=CONFIG["seed"], stratify=df["label"])
 
@@ -91,11 +98,14 @@ def main():
 
     make_dir(CONFIG["save_dir"])
 
+    return
+    
     model = train_svm(X_train, y_train, X_valid, y_valid, CONFIG)
 
     print("[INFO] Evaluating model on test set...")
     test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
     df_test = load_data(test_csv, CONFIG)
+    df_test, _, _ = process_data(df_test, encoder, scaler)
     X_test = df_test.drop(columns=["label"])
     y_test = df_test["label"]
 

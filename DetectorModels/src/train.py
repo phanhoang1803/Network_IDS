@@ -6,6 +6,7 @@ from collections import defaultdict
 import gc
 import os
 import time
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
@@ -15,6 +16,7 @@ import torch.utils
 import torch.utils.data
 from tqdm import tqdm
 import copy
+from data.data_processing import process_data
 from data.data_loading import load_data
 from data.dataset import UNSW_NB15_Dataset
 from model.criterion import criterion
@@ -366,7 +368,9 @@ def main():
     # Load data, preprocess data, feature engineering, ...
     train_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_training-set.csv")
     df = load_data(train_csv, CONFIG)
-    
+    df, encoder, scaler = process_data(df)
+    joblib.dump(os.path.join(CONFIG["save_dir"], "encoder.pkl"))
+    joblib.dump(os.path.join(CONFIG["save_dir"], "scaler.pkl"))
     # print(df.info())
     
     # Set T-max
@@ -405,6 +409,7 @@ def main():
     # ------------- Test PHASE -------------
     test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
     df_test = load_data(test_csv, CONFIG)
+    df_test, _, _ = process_data(df_test, encoder, scaler)
     test_dataset = UNSW_NB15_Dataset(df_test, CONFIG)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
