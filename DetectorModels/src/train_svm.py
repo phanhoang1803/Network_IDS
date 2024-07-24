@@ -84,8 +84,8 @@ def main():
     df = load_data(train_csv, CONFIG)
     df, encoder, scaler = process_data(df)
 
-    encoder = joblib.dump(os.path.join(CONFIG["save_dir"], "encoder.pkl"))
-    scaler = joblib.dump(os.path.join(CONFIG["save_dir"], "scaler.pkl"))
+    joblib.dump(os.path.join(CONFIG["save_dir"], "encoder.pkl"))
+    joblib.dump(os.path.join(CONFIG["save_dir"], "scaler.pkl"))
 
     print(df.info())
 
@@ -98,8 +98,6 @@ def main():
 
     make_dir(CONFIG["save_dir"])
 
-    return
-    
     model = train_svm(X_train, y_train, X_valid, y_valid, CONFIG)
 
     print("[INFO] Evaluating model on test set...")
