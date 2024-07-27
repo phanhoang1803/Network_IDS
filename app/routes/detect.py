@@ -57,9 +57,9 @@ def detect_intrusion_lgbm():
         df = df.drop(columns=["label"])
 
     # Predict intrusion
-    prediction = lgbm_model.predict(df)
+    prediction = lgbm_model.predict(df, predict_disable_shape_check=True)
     # Convert prediction to intrusion boolean
     is_intrusion = (prediction > 0.5).astype(int)
 
     # Return intrusion prediction as JSON response
-    return jsonify({"intrusion": str(is_intrusion)})
+    return jsonify({"intrusion": is_intrusion.tolist()})
