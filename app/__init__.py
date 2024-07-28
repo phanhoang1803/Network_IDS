@@ -1,10 +1,7 @@
-import asyncio
-from flask import Flask, Response
+from flask import Flask
 import joblib
 from .model.load_model import load_intrusion_model, load_lgbm_model
 import os
-import pyshark
-import threading
 
 mlp_model = load_intrusion_model(os.getenv("MLP_MODEL_PATH", "ckpts/model_scripted.pt"))
 mlp_model.eval()
