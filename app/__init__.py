@@ -18,9 +18,9 @@ def create_app():
     app = Flask(__name__)
     
     from app.routes.detect import detect_bp
-    from app.routes.data import data_bp
+    # from app.routes.data import data_bp
     app.register_blueprint(detect_bp, url_prefix="/detect")
-    app.register_blueprint(data_bp, url_prefix="/data")
+    # app.register_blueprint(data_bp, url_prefix="/data")
     
     return app
     
