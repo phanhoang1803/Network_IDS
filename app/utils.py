@@ -4,7 +4,7 @@ from scapy.all import rdpcap, TCP, IP, IPv6, UDP, ICMP, ARP
 from DetectorModels.src.data.data_processing import generate_features, process_data
 from app import lgbm_model
 
-def lgbm_inference(df_origin, encoder, scaler):
+def lgbm_inference(df_origin, encoder, scaler, threshold=0.5):
     df = df_origin.copy()
     
     df = generate_features(df)
@@ -22,7 +22,7 @@ def lgbm_inference(df_origin, encoder, scaler):
     prediction = lgbm_model.predict(df, predict_disable_shape_check=True)
     print(prediction)
     # Convert prediction to intrusion boolean
-    is_intrusion = (prediction > 0.59).astype(int)
+    is_intrusion = (prediction > threshold).astype(int)
     
     return is_intrusion
 

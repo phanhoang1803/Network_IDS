@@ -78,7 +78,7 @@ def monitor_network(pcap_file, interval):
             df = parse_pcap(pcap_file)
 
             print("\n[MONITOR NETWORK] Predicting intrusion...")
-            is_intrusion = lgbm_inference(pd.concat([df, pd.DataFrame({"label": [0] * len(df)})], axis=1), encoder, scaler)
+            is_intrusion = lgbm_inference(pd.concat([df, pd.DataFrame({"label": [0] * len(df)})], axis=1), encoder, scaler, threshold=0.59)
             df_result = pd.concat([df, pd.DataFrame({'is_intrusion': is_intrusion})], axis=1).to_json(orient='records')
 
             socketio.emit('monitor_result', df_result)

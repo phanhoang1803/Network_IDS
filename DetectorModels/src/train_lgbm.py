@@ -40,10 +40,7 @@ def train_lgbm(X_train, y_train, X_valid, y_valid, CONFIG):
         'bagging_freq': CONFIG["bagging_freq"],
 
         'boost_from_average': True,
-        'lambda_l1': 0.1,
-        'lambda_l2': 0.1,
         'boosting_type': 'gbdt',
-        'early_stopping_rounds': 100,
         'verbose': 1,
     }
 
@@ -51,7 +48,7 @@ def train_lgbm(X_train, y_train, X_valid, y_valid, CONFIG):
     model = lgb.train(params,
                       lgb_train,
                       num_boost_round=CONFIG["num_boost_round"],
-                      valid_sets=[lgb_train, lgb_valid])
+                      valid_sets=[lgb_valid])
     print("[INFO] Training completed.")
 
     return model
@@ -69,7 +66,7 @@ def evaluate_model(model, X_test, y_test):
         dict: Dictionary with evaluation metrics.
     """
     y_pred_proba = model.predict(X_test, num_iteration=model.best_iteration)
-    
+    print(y_pred_proba[:100])
     
     precision, recall, thresholds = precision_recall_curve(y_test, y_pred_proba)
     f1_scores = 2 * recall * precision / (recall + precision)
@@ -77,7 +74,7 @@ def evaluate_model(model, X_test, y_test):
     print(f"Best threshold: {best_threshold}")
 
     # Apply the best threshold
-    y_pred = (y_pred_proba > best_threshold).astype(int)
+    y_pred = (y_pred_proba > 0.5).astype(int)
 
     # Number of negatives
     print(np.sum(y_test == 0))
