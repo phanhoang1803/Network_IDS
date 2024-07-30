@@ -26,7 +26,7 @@ class MLP(nn.Module):
             layers.append(nn.Linear(in_features, out_features))
             layers.append(nn.ReLU())
             layers.append(nn.LayerNorm(out_features))
-            layers.append(nn.Dropout(0.3))
+            layers.append(nn.Dropout(0.5))
             in_features = out_features
         
         layers.append(nn.Linear(hidden_dims[-1], output_dim))
