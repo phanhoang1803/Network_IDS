@@ -233,6 +233,7 @@ def test(model, test_loader, device, CONFIG):
             y = data["y"].to(device, dtype=torch.float32)
             
             outputs = model(x).squeeze(1)
+            outputs = torch.sigmoid(outputs)
             print(outputs)
             
             preds = (outputs > 0.5).float()
