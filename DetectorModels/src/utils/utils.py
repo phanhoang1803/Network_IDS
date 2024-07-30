@@ -75,7 +75,7 @@ def parse_args():
 
 def fetch_model(CONFIG):
     if CONFIG["model_name"] == "MLP":
-        model = MLP(input_dim=CONFIG["input_dim"], hidden_dims=[128, 64], output_dim=2)
+        model = MLP(input_dim=CONFIG["input_dim"], hidden_dims=[128, 64], output_dim=1)
     else:
         raise ValueError(f"Model {CONFIG['model_name']} is not recognized.")
     

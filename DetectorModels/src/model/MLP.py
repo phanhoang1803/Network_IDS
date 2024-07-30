@@ -30,7 +30,7 @@ class MLP(nn.Module):
             in_features = out_features
         
         layers.append(nn.Linear(hidden_dims[-1], output_dim))
-        layers.append(nn.Softmax(dim=1))
+        # layers.append(nn.Sigmoid())
         
         self.model = nn.Sequential(*layers)
     

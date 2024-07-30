@@ -48,12 +48,14 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
     train_bar = tqdm(dataloader, total=len(dataloader))
     for data in train_bar:
         x = data["x"].to(device, dtype=torch.float32, non_blocking=True)
-        y = data["y"].to(device, dtype=torch.long, non_blocking=True)
+        y = data["y"].to(device, dtype=torch.float32, non_blocking=True)
         
         optimizer.zero_grad()
-        outputs = model(x)
+        outputs = model(x).squeeze(1)
         
-        loss = criterion(outputs, y)
+        # Apply sigmoid activation and compute the loss
+        outputs = torch.sigmoid(outputs)
+        loss = criterion(outputs, y) # BCELoss
         loss.backward()
         
         # Update the weights
@@ -65,7 +67,7 @@ def train_epoch(model, dataloader, optimizer, scheduler, epoch, device, CONFIG):
 
         # Update the running loss and correct predictions
         running_loss += loss.detach().item() * x.size(0)
-        _, preds = torch.max(outputs, 1)
+        preds = (outputs > 0.5).float()
         running_correct += (preds == y).sum().item()
         
         train_bar.set_postfix(Loss=running_loss / len(dataloader.dataset), Accuracy=running_correct / len(dataloader.dataset))
@@ -104,18 +106,19 @@ def valid_epoch(model, dataloader, epoch, device, CONFIG):
     with torch.no_grad():
         for data in tqdm(dataloader, total=len(dataloader)):
             # Move the data to the device
-            x = data["x"].to(device, dtype=torch.float)
-            y = data["y"].to(device, dtype=torch.long)
+            x = data["x"].to(device, dtype=torch.float32)
+            y = data["y"].to(device, dtype=torch.float32)
             
             # Forward pass
-            outputs = model(x)
+            outputs = model(x).squeeze(1)
             
             # Calculate the loss
+            outputs = torch.sigmoid(outputs)
             loss = criterion(outputs, y)
 
             # Update the running loss and correct predictions
             running_loss += loss.detach().item() * x.size(0)
-            _, preds = torch.max(outputs, 1)
+            preds = (outputs > 0.5).float()
             running_correct += torch.sum(preds == y).item()
             
     # Calculate the epoch loss and accuracy
@@ -226,11 +229,11 @@ def test(model, test_loader, device, CONFIG):
     with torch.no_grad():
         for data in tqdm(test_loader, total=len(test_loader)):
             # Move the data to the device
-            x = data["x"].to(device, dtype=torch.float)
-            y = data["y"].to(device, dtype=torch.long)
+            x = data["x"].to(device, dtype=torch.float32)
+            y = data["y"].to(device, dtype=torch.float32)
             
-            outputs = model(x)
-            _, preds = torch.max(outputs, 1)
+            outputs = model(x).squeeze(1)
+            preds = (outputs > 0.5).float()
             
             all_labels.extend(y.cpu().detach().numpy())
             all_preds.extend(preds.cpu().detach().numpy())
@@ -429,7 +432,7 @@ def main():
         "f1": f1,
         "recall": recall,
         "precision": precision
-    })
+    }, index=[0])
 
     test_res.to_csv(os.path.join(CONFIG["save_dir"], "test_result.csv"), index=False)
     
