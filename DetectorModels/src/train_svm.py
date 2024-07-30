@@ -82,6 +82,7 @@ def main():
     df = load_data(train_csv, CONFIG)
     df, encoder, scaler = process_data(df)
 
+    make_dir(CONFIG["save_dir"])
     joblib.dump(encoder, os.path.join(CONFIG["save_dir"], "encoder.pkl"))
     joblib.dump(scaler, os.path.join(CONFIG["save_dir"], "scaler.pkl"))
 
