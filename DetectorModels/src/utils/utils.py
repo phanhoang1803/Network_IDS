@@ -34,7 +34,7 @@ def parse_args():
     parser.add_argument("--train_batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--valid_batch_size", type=int, default=32, help="Batch size")
     parser.add_argument("--learning_rate", type=float, default=1e-3, help="Learning rate")
-    parser.add_argument("--weight_decay", type=float, default=1e-5, help="Weight decay")
+    parser.add_argument("--weight_decay", type=float, default=1e-4, help="Weight decay")
     parser.add_argument("--optimizer", type=str, default="Adam", help="Optimizer")
     parser.add_argument("--scheduler", type=str, default="CosineAnnealingLR", help="Scheduler")
     parser.add_argument("--T_max", type=int, default=10, help="T_max for CosineAnnealingLR")
@@ -75,7 +75,7 @@ def parse_args():
 
 def fetch_model(CONFIG):
     if CONFIG["model_name"] == "MLP":
-        model = MLP(input_dim=CONFIG["input_dim"], hidden_dims=[64, 32], output_dim=1)
+        model = MLP(input_dim=CONFIG["input_dim"], hidden_dims=[32], output_dim=1)
     else:
         raise ValueError(f"Model {CONFIG['model_name']} is not recognized.")
     
