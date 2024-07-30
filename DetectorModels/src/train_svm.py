@@ -5,49 +5,39 @@ import numpy as np
 import pandas as pd
 from sklearn.svm import SVC
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
-from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.model_selection import train_test_split
 from data.data_loading import load_data
 from data.data_processing import process_data
 from utils.utils import parse_args, set_seed, make_dir
 import joblib
 
-def train_svm(X_train, y_train, X_valid, y_valid, CONFIG):
+def train_svm(X_train, y_train, CONFIG):
     """
-    Train a Support Vector Machine (SVM) model with hyperparameter tuning.
+    Train a Support Vector Machine (SVM) model.
 
     Args:
         X_train (pd.DataFrame): Training features.
         y_train (pd.Series): Training labels.
-        X_valid (pd.DataFrame): Validation features.
-        y_valid (pd.Series): Validation labels.
         CONFIG (dict): Configuration dictionary.
 
     Returns:
         model: Trained SVM model.
     """
-    # Scale features
-    param_grid = {
-        'C': [0.1, 1, 10, 100],
-        'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
-        'gamma': ['scale', 'auto', 0.1, 1, 10]
-    }
-
-    model = GridSearchCV(
-        SVC(probability=True, shrinking=CONFIG["shrinking"], random_state=CONFIG["seed"]),
-        param_grid,
-        cv=3,
-        scoring='f1',
-        verbose=1,
-        n_jobs=-1
+    model = SVC(
+        probability=True, 
+        shrinking=CONFIG["shrinking"], 
+        random_state=CONFIG["seed"], 
+        C=CONFIG["C"], 
+        kernel=CONFIG["kernel"], 
+        gamma=CONFIG["gamma"]
     )
 
-    print("[INFO] Training SVM model with GridSearchCV...")
+    print("[INFO] Training SVM model...")
     start_time = time.time()
     model.fit(X_train, y_train)
     print(f"[INFO] Training completed in {time.time() - start_time:.2f} seconds.")
-    print(f"[INFO] Best parameters found: {model.best_params_}")
 
-    return model.best_estimator_
+    return model
 
 def evaluate_model(model, X_test, y_test):
     """
@@ -106,7 +96,7 @@ def main():
 
     make_dir(CONFIG["save_dir"])
 
-    model = train_svm(X_train, y_train, X_valid, y_valid, CONFIG)
+    model = train_svm(X_train, y_train, CONFIG)
 
     print("[INFO] Evaluating model on test set...")
     test_csv = os.path.join(CONFIG["data_dir"], "UNSW_NB15_testing-set.csv")
