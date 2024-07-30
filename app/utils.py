@@ -18,7 +18,7 @@ def lgbm_inference(df_origin, encoder, scaler):
     prediction = lgbm_model.predict(df, predict_disable_shape_check=True)
     print(prediction)
     # Convert prediction to intrusion boolean
-    is_intrusion = (prediction > 0.6).astype(int)
+    is_intrusion = (prediction > 0.5).astype(int)
     
     return is_intrusion
 
@@ -362,7 +362,10 @@ def aggregate_connections(connections):
             conn['dpkts'] = rev_conn['spkts']
             conn['dbytes'] = rev_conn['sbytes']
             
-            conn['rate'] = 0 # TODO: calculate rate (The paper doesn't specify this, but it's in the data)
+            total_bytes = conn['sbytes'] + conn['dbytes']
+            conn['rate'] = total_bytes / (conn['end_time'] - conn['start_time'])
+            
+            # conn['rate'] = 0 # TODO: calculate rate (The paper doesn't specify this, but it's in the data)
             
             conn['dttl'] = rev_conn['sttl']
             conn['dload'] = rev_conn['sload']

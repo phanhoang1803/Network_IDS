@@ -63,7 +63,7 @@ def evaluate_model(model, X_test, y_test):
         dict: Dictionary with evaluation metrics.
     """
     y_pred = model.predict(X_test, num_iteration=model.best_iteration)
-    y_pred = (y_pred > 0.5).astype(int)
+    y_pred = (y_pred > 0.505).astype(int)
 
     # Number of negatives
     print(np.sum(y_test == 0))
