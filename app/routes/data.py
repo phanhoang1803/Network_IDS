@@ -7,8 +7,12 @@ import threading
 import time
 import pandas as pd
 from scapy.all import sniff, wrpcap
+from tqdm import tqdm
 from utils import parse_pcap, lgbm_inference
 from app import socketio, lgbm_model, encoder, scaler
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 data_bp = Blueprint("data", __name__)
 
@@ -22,6 +26,22 @@ stop_monitoring = threading.Event()
 sniffed_packets = []
 duration = 60  # Default duration in seconds for each epoch
 
+def countdown_timer(interval):
+    for i in range(int(interval), 0, -1):
+        if stop_monitoring.is_set():
+            break
+        print(f"Time remaining: {i} seconds", end="\r")
+        time.sleep(1)
+    print(" " * 30, end="\r")  # Clear the line
+
+def progress_bar(interval):
+    with tqdm(total=interval, desc="Sniffing", bar_format="{desc}: {bar} {remaining}") as pbar:
+        for _ in range(int(interval)):
+            if stop_monitoring.is_set():
+                break
+            time.sleep(1)
+            pbar.update(1)
+
 def monitor_network(pcap_file, interval):
     global sniffed_packets
 
@@ -32,27 +52,40 @@ def monitor_network(pcap_file, interval):
         def packet_handler(packet):
             sniffed_packets.append(packet)
         
-        # Sniff packets for the interval duration
-        sniff(prn=packet_handler, timeout=interval, stop_filter=lambda x: stop_monitoring.is_set())
+        try:
+            print("\n[MONITOR NETWORK] Sniffing...\n")
+            # Start the progress bar in a separate thread
+            progress_thread = threading.Thread(target=progress_bar, args=(interval,))
+            progress_thread.start()
+            sniff(prn=packet_handler, timeout=interval, stop_filter=lambda x: stop_monitoring.is_set())
+            # Ensure the progress bar thread finishes
+            progress_thread.join()
+            
+        except Exception as e:
+            print(f"Error during sniffing: {e}")
+            continue
         
-        # Save packets to pcap file
-        wrpcap(pcap_file, sniffed_packets)
+        try:
+            print("\n[MONITOR NETWORK] Saving pcap file...\n")
+            wrpcap(pcap_file, sniffed_packets)
+        except Exception as e:
+            print(f"Error saving pcap file: {e}")
+            continue
 
         # Process and send results back
         try:
+            print("\n[MONITOR NETWORK] Parsing pcap file...\n")
             df = parse_pcap(pcap_file)
-        except Exception as e:
-            print(f"Error parsing pcap file: {e}")
-            continue
 
-        result = df.to_json(orient='records')
-        print(df.info())
-        is_intrusion = lgbm_inference(pd.concat([df, pd.DataFrame({"label": [0] * len(df)})], axis=1), encoder, scaler)
-        df_result = pd.concat([df, pd.DataFrame({'is_intrusion': is_intrusion})], axis=1).to_json(orient='records')
-        
-        socketio.emit('monitor_result', df_result)
-        
-        df.to_csv('output.csv', index=False)
+            print("\n[MONITOR NETWORK] Predicting intrusion...")
+            is_intrusion = lgbm_inference(pd.concat([df, pd.DataFrame({"label": [0] * len(df)})], axis=1), encoder, scaler)
+            df_result = pd.concat([df, pd.DataFrame({'is_intrusion': is_intrusion})], axis=1).to_json(orient='records')
+
+            socketio.emit('monitor_result', df_result)
+            
+            df.to_csv('output.csv', index=False)
+        except Exception as e:
+            print(f"Error processing data: {e}")
         
         # Wait a moment before starting the next epoch if needed
         time.sleep(1)
@@ -88,3 +121,23 @@ def stop_monitor():
     monitoring_thread.join()  # Wait for the thread to finish
     
     return jsonify({"message": "Monitoring stopped."})
+
+
+# WebSocket events for detecting disconnections
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Client disconnected")
+    stop_monitoring.set()  # Signal the monitoring thread to stop
+
+# To ensure the monitoring thread stops if the application shuts down
+def cleanup():
+    stop_monitoring.set()
+    if monitoring_thread and monitoring_thread.is_alive():
+        monitoring_thread.join()
+        
+import atexit
+atexit.register(cleanup)

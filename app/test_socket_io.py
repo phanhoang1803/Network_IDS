@@ -14,7 +14,7 @@ def monitor_result(data):
 sio.connect('http://127.0.0.1:5000')
 
 # Start monitoring
-response = requests.post('http://127.0.0.1:5000/data/start_monitor', json={"duration": 0.1})  # 1 minute duration
+response = requests.post('http://127.0.0.1:5000/data/start_monitor', json={"duration": 2})  # 1 minute duration
 if response.status_code == 200:
     print('Monitoring started.')
 else:

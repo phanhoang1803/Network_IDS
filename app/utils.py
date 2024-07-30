@@ -14,11 +14,15 @@ def lgbm_inference(df_origin, encoder, scaler):
     if "label" in df.columns:
         df = df.drop(columns=["label"])
 
+    # Drop
+    # drop_cols = ["rate", "ct_srv_src", "ct_srv_dst", "ct_dst_ltm", "ct_src_ltm", "ct_src_dport_ltm", "ct_dst_sport_ltm", "ct_dst_src_ltm"]
+    # df = df.drop(columns=drop_cols)
+
     # Predict intrusion
     prediction = lgbm_model.predict(df, predict_disable_shape_check=True)
     print(prediction)
     # Convert prediction to intrusion boolean
-    is_intrusion = (prediction > 0.5).astype(int)
+    is_intrusion = (prediction > 0.59).astype(int)
     
     return is_intrusion
 
@@ -344,8 +348,34 @@ def initialize_connections(packets):
     return connections
 
 def aggregate_connections(connections):
+    from collections import defaultdict, deque
+    
     seen_connections = set()
     aggregated_connections = {}
+    
+    # Initialize counters for connection counts with sliding window
+    sliding_window_size = 100
+    window_connections = {
+        'srv_src': deque(maxlen=sliding_window_size),
+        'state_ttl': deque(maxlen=sliding_window_size),
+        'dst_ltm': deque(maxlen=sliding_window_size),
+        'src_dport_ltm': deque(maxlen=sliding_window_size),
+        'dst_sport_ltm': deque(maxlen=sliding_window_size),
+        'dst_src_ltm': deque(maxlen=sliding_window_size),
+        'srv_dst': deque(maxlen=sliding_window_size),
+    }
+    
+    # Initialize counters
+    counters = {
+        'srv_src': defaultdict(int),
+        'state_ttl': defaultdict(int),
+        'dst_ltm': defaultdict(int),
+        'src_dport_ltm': defaultdict(int),
+        'dst_sport_ltm': defaultdict(int),
+        'dst_src_ltm': defaultdict(int),
+        'srv_dst': defaultdict(int),
+    }
+    
     for conn_key, conn in connections.items():
         src_ip, dst_ip, src_port, dst_port, proto = conn_key
         rev_conn_key = (dst_ip, src_ip, dst_port, src_port, proto)
@@ -385,6 +415,46 @@ def aggregate_connections(connections):
             conn['tcprtt'] = conn['synack'] + conn['ackdat']
             
             conn['dmean'] = int(conn['dbytes'] / (conn['dpkts'] + 1e-6))
+            
+    
+            # TODO: Connection Counts (ct_* metrics)
+            # Add the current connection to the sliding windows
+            window_connections['srv_src'].append((conn['service'], src_ip)) 
+            window_connections['state_ttl'].append((proto, conn.get('state', ''), conn.get('ttl', '')))
+            window_connections['dst_ltm'].append((dst_ip,))
+            window_connections['src_dport_ltm'].append((src_ip, dst_port))
+            window_connections['dst_sport_ltm'].append((dst_ip, src_port))
+            window_connections['dst_src_ltm'].append((dst_ip, src_ip))
+            window_connections['srv_dst'].append((conn['service'], dst_ip))
+            
+            # Update counters based on the sliding windows
+            for metric, window in window_connections.items():
+                counters[metric].clear()  # Reset counters for the current window
+                for item in window:
+                    counters[metric][item] += 1
+            
+            # Add metrics to connection data
+            conn['ct_srv_src'] = counters['srv_src'][(conn['service'], src_ip)]
+            conn['ct_state_ttl'] = counters['state_ttl'][(proto, conn.get('state', ''), conn.get('ttl', ''))]
+            conn['ct_dst_ltm'] = counters['dst_ltm'][(dst_ip,)]
+            conn['ct_src_dport_ltm'] = counters['src_dport_ltm'][(src_ip, dst_port)]
+            conn['ct_dst_sport_ltm'] = counters['dst_sport_ltm'][(dst_ip, src_port)]
+            conn['ct_dst_src_ltm'] = counters['dst_src_ltm'][(dst_ip, src_ip)]
+            conn['ct_srv_dst'] = counters['srv_dst'][(conn['service'], dst_ip)]
+            
+            # ct_srv_src: Count of connections with same service and source IP in 100 connections according to the last time.
+            
+            # ct_state_ttl: No. for each state according to specific range of values for source/destination time to live.
+            
+            # ct_dst_ltm: Count of connections of the same destination address in 100 connections according to the last time.
+            
+            # ct_src_dport_ltm: Count of connections of the same source address and the destination port in 100 connections according to the last time.
+            
+            # ct_dst_sport_ltm: Count of connections of the same destination address and the source port in 100 connections according to the last time.
+            
+            # ct_dst_src_ltm: Count of connections of the same source and the destination address in in 100 connections according to the last time.
+            
+            # ct_srv_dst: Count of connections that contain the same service and destination address in 100 connections according to the last time.
             
             aggregated_connections[conn_key] = conn
     
@@ -436,12 +506,17 @@ def parse_pcap(file):
                 - ct_flw_http_mthd (int): HTTP method of the connection.
                 - is_sm_ips_ports (bool): Whether the connection involves IPs and ports in a suspicious manner.
     """
+    print("[PARSE_PCAP] Parsing pcap file...")
     packets = rdpcap(file)
     data = []
+    print("[PARSE_PCAP] Initializing connections...")
     connections = initialize_connections(packets)
+    
+    print("[PARSE_PCAP] Aggregating connections...")
     aggregated_connections = aggregate_connections(connections)
             
     data = []
+    print("[PARSE_PCAP] Parsing connections...")
     for conn_key, conn in aggregated_connections.items():
         src_ip, dst_ip, src_port, dst_port, proto = conn_key
         dur = conn['end_time'] - conn['start_time']
