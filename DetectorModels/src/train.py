@@ -9,7 +9,7 @@ import time
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, roc_auc_score
 from sklearn.model_selection import GroupKFold, StratifiedGroupKFold, train_test_split, StratifiedKFold
 import torch
 import torch.utils
@@ -225,6 +225,7 @@ def test(model, test_loader, device, CONFIG):
     
     all_labels = []
     all_preds = []
+    all_outputs = []
     
     with torch.no_grad():
         for data in tqdm(test_loader, total=len(test_loader)):
@@ -234,24 +235,28 @@ def test(model, test_loader, device, CONFIG):
             
             outputs = model(x).squeeze(1)
             outputs = torch.sigmoid(outputs)
-            print(outputs)
             
             preds = (outputs > 0.5).float()
             
+            all_outputs.extend(outputs.cpu().detach().numpy())
             all_labels.extend(y.cpu().detach().numpy())
             all_preds.extend(preds.cpu().detach().numpy())
+            
+    print(all_outputs)
     
     # Compute metrics
     accuracy = accuracy_score(all_labels, all_preds)
     f1 = f1_score(all_labels, all_preds, average='weighted')
     recall = recall_score(all_labels, all_preds, average='weighted')
     precision = precision_score(all_labels, all_preds, average='weighted')
+    auc = roc_auc_score(all_labels, all_outputs)
     
     # Print or log metrics
     print(f'Accuracy: {accuracy:.4f}')
     print(f'F1 Score: {f1:.4f}')
     print(f'Recall: {recall:.4f}')
     print(f'Precision: {precision:.4f}')
+    print(f'AUC: {auc:.4f}')
     
     return accuracy, f1, recall, precision, all_preds
 
