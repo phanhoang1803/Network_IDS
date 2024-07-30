@@ -45,10 +45,12 @@ def train_lgbm(X_train, y_train, X_valid, y_valid, CONFIG):
     }
 
     print("[INFO] Training LightGBM model...")
+    start_time = time.time()
     model = lgb.train(params,
                       lgb_train,
                       num_boost_round=CONFIG["num_boost_round"],
                       valid_sets=[lgb_valid])
+    print(f"[INFO] Training completed in {time.time() - start_time:.2f} seconds.")
     print("[INFO] Training completed.")
 
     return model
@@ -66,7 +68,6 @@ def evaluate_model(model, X_test, y_test):
         dict: Dictionary with evaluation metrics.
     """
     y_pred_proba = model.predict(X_test, num_iteration=model.best_iteration)
-    print(y_pred_proba[:100])
     
     precision, recall, thresholds = precision_recall_curve(y_test, y_pred_proba)
     f1_scores = 2 * recall * precision / (recall + precision)
@@ -79,8 +80,7 @@ def evaluate_model(model, X_test, y_test):
     # Number of negatives
     print(np.sum(y_test == 0))
     print(np.sum(y_pred == 0))
-    print(y_pred[:100])
-    print(y_test[:100])
+    
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)

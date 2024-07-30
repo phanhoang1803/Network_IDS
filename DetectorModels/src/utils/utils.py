@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument("--feature_fraction", type=float, default=0.8, help="Feature fraction for LightGBM")
     parser.add_argument("--bagging_fraction", type=float, default=0.8, help="Bagging fraction for LightGBM")
     parser.add_argument("--bagging_freq", type=int, default=5, help="Bagging frequency for LightGBM")
-    parser.add_argument("--num_boost_round", type=int, default=100, help="Number of boosting rounds")
+    parser.add_argument("--num_boost_round", type=int, default=115, help="Number of boosting rounds")
     parser.add_argument("--early_stopping_rounds", type=int, default=10, help="Early stopping rounds for LightGBM")
 
     # XGBoost parameters
