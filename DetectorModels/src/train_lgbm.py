@@ -68,7 +68,8 @@ def evaluate_model(model, X_test, y_test):
     # Number of negatives
     print(np.sum(y_test == 0))
     print(np.sum(y_pred == 0))
-    
+    print(y_pred[:100])
+    print(y_test[:100])
     accuracy = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)

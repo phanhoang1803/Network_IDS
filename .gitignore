@@ -2,3 +2,4 @@ data/
 *.bin
 **/src/ckpts/
 *.csv
+*.pcap

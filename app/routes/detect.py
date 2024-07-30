@@ -3,6 +3,7 @@ from app import mlp_model, lgbm_model, encoder, scaler
 import numpy as np
 import pandas as pd
 from DetectorModels.src.data.data_processing import generate_features, process_data
+from utils import lgbm_inference
 
 detect_bp = Blueprint("detect", __name__)
 
@@ -32,7 +33,7 @@ def detect_intrusion_lgbm():
         data = request.get_json()
         df = pd.DataFrame(data)
     # Process multipart/form-data content type
-    elif request.content_type.startswith('multipart/form-data'):
+    elif request.content_type and request.content_type.startswith('multipart/form-data'):
         # Check for file in request
         if 'file' not in request.files:
             return jsonify({'error': 'No file part in the request'}), 400
@@ -49,17 +50,9 @@ def detect_intrusion_lgbm():
     # Print dataframe info
     print(df.info())
     
-    df = generate_features(df)
-    df, _, _ = process_data(df, encoder, scaler)
-
-    # Drop label column if it exists
-    if "label" in df.columns:
-        df = df.drop(columns=["label"])
-
-    # Predict intrusion
-    prediction = lgbm_model.predict(df, predict_disable_shape_check=True)
-    # Convert prediction to intrusion boolean
-    is_intrusion = (prediction > 0.5).astype(int)
+    is_intrusion = lgbm_inference(df, encoder, scaler)
 
     # Return intrusion prediction as JSON response
     return jsonify({"intrusion": is_intrusion.tolist()})
+
+

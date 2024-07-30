@@ -26,9 +26,12 @@ def process_data(df, encoder=None, scaler=None):
     """
     This processing function is based on: https://www.kaggle.com/code/carlkirstein/unsw-nb15-modelling-97-7/notebook
     """
-    df.drop(['id', 'attack_cat'], axis=1, inplace=True)
+    if 'attack_cat' in df.columns:
+        df.drop('attack_cat', axis=1, inplace=True)
+    if 'id' in df.columns:
+        df.drop('id', axis=1, inplace=True)
     
-    num_cols = df.select_dtypes(exclude=['object']).columns.drop('label')
+    num_cols = df.select_dtypes(exclude=['object']).columns.drop('label') if 'label' in df.columns else df.select_dtypes(exclude=['object']).columns
     cat_cols = df.select_dtypes(include=['object']).columns
     
     df[num_cols] = df[num_cols].apply(lambda x: x.clip(0, x.quantile(0.95)) if x.max() > 10 * x.median() and x.max() > 10 else x)

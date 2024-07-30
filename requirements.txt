@@ -4,3 +4,8 @@ torch
 xgboost
 pandas
 numpy
+flask_socketio
+flask_cors
+scapy
+pyshark
+websocket-client
