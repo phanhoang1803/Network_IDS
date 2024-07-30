@@ -29,7 +29,8 @@ def train_svm(X_train, y_train, CONFIG):
         random_state=CONFIG["seed"], 
         C=CONFIG["C"], 
         kernel=CONFIG["kernel"], 
-        gamma=CONFIG["gamma"]
+        gamma=CONFIG["gamma"], 
+        verbose=True
     )
 
     print("[INFO] Training SVM model...")
