@@ -25,7 +25,7 @@ def train_svm(X_train, y_train, CONFIG):
     """
     model = SVC(
         probability=True, 
-        shrinking=CONFIG["shrinking"], 
+        shrinking=0, 
         random_state=CONFIG["seed"], 
         C=CONFIG["C"], 
         kernel=CONFIG["kernel"], 

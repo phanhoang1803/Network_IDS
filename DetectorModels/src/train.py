@@ -238,6 +238,8 @@ def test(model, test_loader, device, CONFIG):
             all_labels.extend(y.cpu().detach().numpy())
             all_preds.extend(preds.cpu().detach().numpy())
     
+    print("Predictions:", all_preds)
+    
     # Compute metrics
     accuracy = accuracy_score(all_labels, all_preds)
     f1 = f1_score(all_labels, all_preds, average='weighted')
