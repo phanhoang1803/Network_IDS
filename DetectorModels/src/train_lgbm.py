@@ -85,7 +85,7 @@ def evaluate_model(model, X_test, y_test):
     f1 = f1_score(y_test, y_pred)
     recall = recall_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred)
-    auroc = roc_auc_score(y_pred, y_pred_proba)
+    auroc = roc_auc_score(y_test, y_pred_proba)
 
     metrics = {
         'accuracy': accuracy,
