@@ -85,14 +85,16 @@ cd Network_IDS/DetectorModels/src
 To train a neural network, the following arguments are required. For more details and additional arguments, refer to Training parameters (NN-specific) in `utils/utils.py`.
 
 ```sh
-python train.py     --data_dir "path/to/data/dir" ```
+python train.py     --data_dir "path/to/data/dir"
+```
 
 ### Train LightGBM
 
 To train LightGBM, the following arguments are required. For more details and additional arguments, refer to LightGBM parameters in `utils/utils.py`.
 
 ```sh
-python train_lgbm.py     --data_dir "path/to/data/dir" ```
+python train_lgbm.py     --data_dir "path/to/data/dir"
+```
 
 ### Run the Application
 
